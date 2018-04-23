@@ -1,0 +1,434 @@
+Initialize()
+While (GameState <> "")
+    DoGameLoop()
+EndWhile
+Program.End()
+
+Sub Initialize
+    InitializeVariables()
+    InitializeScreen()
+EndSub
+
+Sub InitializeVariables
+    Array.SetValue("DeltaX","North",0)
+    Array.SetValue("DeltaX","East",1)
+    Array.SetValue("DeltaX","South",0)
+    Array.SetValue("DeltaX","West",-1)
+    Array.SetValue("DeltaY","North",-1)
+    Array.SetValue("DeltaY","East",0)
+    Array.SetValue("DeltaY","South",1)
+    Array.SetValue("DeltaY","West",0)
+    Array.SetValue("NorthFlag","North",1)
+    Array.SetValue("NorthFlag","East",0)
+    Array.SetValue("NorthFlag","South",0)
+    Array.SetValue("NorthFlag","West",0)
+    Array.SetValue("SouthFlag","North",0)
+    Array.SetValue("SouthFlag","East",0)
+    Array.SetValue("SouthFlag","South",1)
+    Array.SetValue("SouthFlag","West",0)
+    Array.SetValue("EastFlag","North",0)
+    Array.SetValue("EastFlag","East",1)
+    Array.SetValue("EastFlag","South",0)
+    Array.SetValue("EastFlag","West",0)
+    Array.SetValue("WestFlag","North",0)
+    Array.SetValue("WestFlag","East",0)
+    Array.SetValue("WestFlag","South",0)
+    Array.SetValue("WestFlag","West",1)
+    Array.SetValue("DirectionInput","N","North")
+    Array.SetValue("DirectionInput","E","East")
+    Array.SetValue("DirectionInput","S","South")
+    Array.SetValue("DirectionInput","W","West")
+    GameDelay = 100
+    Score = 0
+    HighScore = 0
+    GameState = "TitleScreen"
+    ScreenDirty = 1
+    CurrentDirectory = Text.GetSubText(File.GetSettingsFilePath(),0,Text.GetLength(File.GetSettingsFilePath())-26)
+EndSub
+
+Sub InitializeScreen
+    GraphicsWindow.Show()
+    GraphicsWindow.Width = 640
+    GraphicsWindow.Height = 480
+    GraphicsWindow.KeyDown = HandleKeyPress
+EndSub
+
+Sub HandleTitleScreenKeyPress
+    Key = GraphicsWindow.LastKey
+    If (Key = "Escape") Then
+        GameState=""
+    Else
+        If (Key="F2") Then
+            GameState = "Play"
+            ScreenDirty = 1
+        Else
+            If (Key="F1") Then
+                GameState = "Instructions"
+                ScreenDirty = 1
+            EndIf
+        EndIf
+    EndIf
+EndSub
+
+Sub HandleInstructionsKeyPress
+    Key = GraphicsWindow.LastKey
+    If (Key = "Escape") Then
+        GameState = "TitleScreen"
+        ScreenDirty = 1
+    EndIf
+EndSub
+
+Sub HandlePlayKeyPress
+    Key = GraphicsWindow.LastKey
+    If (Key = "Left") Then
+        DirectionInput = DirectionInput + "W"
+    Else
+        If (Key = "Right") Then
+            DirectionInput = DirectionInput + "E"
+        Else
+            If (Key = "Up") Then
+                DirectionInput = DirectionInput + "N"
+            Else
+                If (Key = "Down") Then
+                    DirectionInput = DirectionInput + "S"
+                EndIf
+            EndIf
+        EndIf
+    EndIf
+EndSub
+
+Sub HandleGameOverKeyPress
+    Key = GraphicsWindow.LastKey
+    If (Key = "Escape") Then
+        GameState=""
+    Else
+        If (Key="F2") Then
+            GameState = "Play"
+            ScreenDirty = 1
+        Else
+            If (Key="F1") Then
+                GameState = "Instructions"
+                ScreenDirty = 1
+            EndIf
+        EndIf
+    EndIf
+EndSub
+
+Sub HandleKeyPress
+    If (GameState="TitleScreen") Then
+      HandleTitleScreenKeyPress()
+    Else 
+        If (GameState="Instructions") Then
+            HandleInstructionsKeyPress()
+        Else
+            If (GameState="Play") Then
+                HandlePlayKeyPress()
+            Else
+                If (GameState="GameOver") Then
+                    HandleGameOverKeyPress()
+                Else
+                EndIf
+            EndIf
+        EndIf
+    EndIf    
+EndSub
+
+Sub DoTitleScreenLoop
+    If (ScreenDirty = 1) Then
+        ScreenDirty = 0
+        GraphicsWindow.Clear()
+        GraphicsWindow.BrushColor = "#000000"
+        GraphicsWindow.FontSize = 32
+        GraphicsWindow.DrawText(0,0,"SBSnake!")
+        GraphicsWindow.FontSize = 16
+        GraphicsWindow.DrawText(0,64," for instructions")
+        GraphicsWindow.DrawText(0,80," for a new game")
+        GraphicsWindow.DrawText(0,96," to exit")
+    EndIf
+EndSub
+
+Sub DoInstructionLoop
+    If (ScreenDirty = 1) Then
+        ScreenDirty = 0
+        GraphicsWindow.Clear()
+        GraphicsWindow.BrushColor = "#000000"
+        GraphicsWindow.FontSize = 32
+        GraphicsWindow.DrawText(0,0,"How To Play SBSnake!")
+        GraphicsWindow.FontSize = 16
+        GraphicsWindow.DrawText(0,64," to move snake.")
+        GraphicsWindow.DrawText(0,80,"Don't hit the walls; don't hit your tail.")
+        GraphicsWindow.DrawText(0,96,"Eat pellets to increase score.")
+        GraphicsWindow.DrawText(0,112," to return to main menu")
+    EndIf
+EndSub
+
+Sub AddPellet
+    PickPellet:
+    PelletX = Math.GetRandomNumber(40)-1
+    PelletY = Math.GetRandomNumber(30)-1
+    Color = GraphicsWindow.GetPixel(PelletX * 16 + 8, PelletY * 16 + 8)
+    If (Color = "#00FF00" Or Color="#FF0000") Then 
+        Goto PickPellet
+    EndIf
+    GraphicsWindow.PenWidth = 0
+    GraphicsWindow.BrushColor = "#FF0000"
+    GraphicsWindow.FillRectangle(PelletX* 16+3, PelletY * 16+3,10,10)
+EndSub
+
+Sub DrawHead
+    GraphicsWindow.PenWidth = 0
+    GraphicsWindow.BrushColor = "#00FF00"
+    GraphicsWindow.FillRectangle(SnakeHeadX * 16+2, SnakeHeadY * 16+2,12,12)
+    If (Direction="South") Then
+        GraphicsWindow.FillRectangle(SnakeHeadX * 16+4, SnakeHeadY*16,8,4)
+    EndIf
+    If (Direction="North") Then
+        GraphicsWindow.FillRectangle(SnakeHeadX * 16+4, SnakeHeadY*16+12,8,4)
+    EndIf
+    If (Direction="East") Then
+        GraphicsWindow.FillRectangle(SnakeHeadX * 16, SnakeHeadY*16+4,4,8)
+    EndIf
+    If (Direction="West") Then
+        GraphicsWindow.FillRectangle(SnakeHeadX * 16+12, SnakeHeadY*16+4,4,8)
+    EndIf
+EndSub
+
+Sub EraseHead
+    If (GraphicsWindow.GetPixel(SnakeHeadX*16+8,SnakeHeadY*16)="#00FF00") Then
+        NorthFlag = 1
+    Else
+        NorthFlag = Array.GetValue("NorthFlag",Direction)
+    EndIf
+    If (GraphicsWindow.GetPixel(SnakeHeadX*16+8,SnakeHeadY*16+15)="#00FF00") Then
+        SouthFlag = 1
+    Else
+        SouthFlag = Array.GetValue("SouthFlag",Direction)
+    EndIf
+    If (GraphicsWindow.GetPixel(SnakeHeadX*16,SnakeHeadY*16+8)="#00FF00") Then
+        WestFlag = 1
+    Else
+        WestFlag = Array.GetValue("WestFlag",Direction)
+    EndIf
+    If (GraphicsWindow.GetPixel(SnakeHeadX*16+15,SnakeHeadY*16+8)="#00FF00") Then
+        EastFlag = 1
+    Else
+        EastFlag = Array.GetValue("EastFlag",Direction)
+    EndIf
+    GraphicsWindow.BrushColor = "#FFFFFF"
+    GraphicsWindow.FillRectangle(SnakeHeadX * 16, SnakeHeadY*16,16,16)
+    GraphicsWindow.BrushColor = "#00FF00"
+    If (AtePellet = 1) Then
+        GraphicsWindow.FillRectangle(SnakeHeadX * 16+3, SnakeHeadY*16+3,10,10)
+    Else
+        GraphicsWindow.FillRectangle(SnakeHeadX * 16+4, SnakeHeadY*16+4,8,8)
+    EndIf
+    If (NorthFlag = 1) Then
+        GraphicsWindow.FillRectangle(SnakeHeadX * 16+4, SnakeHeadY*16,8,4)
+    EndIf
+    If (SouthFlag = 1) Then
+        GraphicsWindow.FillRectangle(SnakeHeadX * 16+4, SnakeHeadY*16+12,8,4)
+    EndIf
+    If (WestFlag = 1) Then
+        GraphicsWindow.FillRectangle(SnakeHeadX * 16, SnakeHeadY*16+4,4,8)
+    EndIf
+    If (EastFlag = 1) Then
+        GraphicsWindow.FillRectangle(SnakeHeadX * 16+12, SnakeHeadY*16+4,4,8)
+    EndIf
+EndSub
+
+Sub EraseTail
+    If (GraphicsWindow.GetPixel(SnakeTailX*16+8,SnakeTailY*16)="#00FF00") Then
+        NorthFlag = 1
+    Else
+        NorthFlag = 0
+    EndIf
+    If (GraphicsWindow.GetPixel(SnakeTailX*16+8,SnakeTailY*16+15)="#00FF00") Then
+        SouthFlag = 1
+    Else
+        SouthFlag = 0
+    EndIf
+    If (GraphicsWindow.GetPixel(SnakeTailX*16,SnakeTailY*16+8)="#00FF00") Then
+        WestFlag = 1
+    Else
+        WestFlag = 0
+    EndIf
+    If (GraphicsWindow.GetPixel(SnakeTailX*16+15,SnakeTailY*16+8)="#00FF00") Then
+        EastFlag = 1
+    Else
+        EastFlag = 0
+    EndIf
+    GraphicsWindow.BrushColor = "#FFFFFF"
+    GraphicsWindow.FillRectangle(SnakeTailX * 16, SnakeTailY*16,16,16)
+    
+    If (NorthFlag = 1) Then
+        TailDirection = "North"
+    EndIf
+    If (SouthFlag = 1) Then
+        TailDirection = "South"
+    EndIf
+    If (EastFlag = 1) Then
+        TailDirection = "East"
+    EndIf
+    If (WestFlag = 1) Then
+        TailDirection = "West"
+    EndIf
+    SnakeTailX = SnakeTailX + Array.GetValue("DeltaX",TailDirection)
+    SnakeTailY = SnakeTailY + Array.GetValue("DeltaY",TailDirection)
+    If (GraphicsWindow.GetPixel(SnakeTailX*16+3,SnakeTailY*16+3)="#00FF00") Then
+        TailPellet = 1
+    Else
+        TailPellet = 0
+    EndIf 
+    If (GraphicsWindow.GetPixel(SnakeTailX*16+8,SnakeTailY*16)="#00FF00") Then
+        NorthFlag = 1
+    Else
+        NorthFlag = 0
+    EndIf
+    If (GraphicsWindow.GetPixel(SnakeTailX*16+8,SnakeTailY*16+15)="#00FF00") Then
+        SouthFlag = 1
+    Else
+        SouthFlag = 0
+    EndIf
+    If (GraphicsWindow.GetPixel(SnakeTailX*16,SnakeTailY*16+8)="#00FF00") Then
+        WestFlag = 1
+    Else
+        WestFlag = 0
+    EndIf
+    If (GraphicsWindow.GetPixel(SnakeTailX*16+15,SnakeTailY*16+8)="#00FF00") Then
+        EastFlag = 1
+    Else
+        EastFlag = 0
+    EndIf
+    If (TailDirection="North") Then
+        SouthFlag = 0
+    EndIf
+    If (TailDirection="South") Then
+        NorthFlag = 0
+    EndIf
+    If (TailDirection="East") Then
+        WestFlag = 0
+    EndIf
+    If (TailDirection="West") Then
+        EastFlag = 0
+    EndIf
+    GraphicsWindow.FillRectangle(SnakeTailX * 16, SnakeTailY*16,16,16)
+    GraphicsWindow.BrushColor = "#00FF00"
+    If (TailPellet = 1) Then
+        GraphicsWindow.FillRectangle(SnakeTailX * 16+3, SnakeTailY*16+3,10,10)
+    Else
+        GraphicsWindow.FillRectangle(SnakeTailX * 16+4, SnakeTailY*16+4,8,8)
+    EndIf
+    If (NorthFlag = 1) Then
+        GraphicsWindow.FillRectangle(SnakeTailX * 16+4, SnakeTailY*16,8,4)
+    EndIf
+    If (SouthFlag = 1) Then
+        GraphicsWindow.FillRectangle(SnakeTailX * 16+4, SnakeTailY*16+12,8,4)
+    EndIf
+    If (WestFlag = 1) Then
+        GraphicsWindow.FillRectangle(SnakeTailX * 16, SnakeTailY*16+4,4,8)
+    EndIf
+    If (EastFlag = 1) Then
+        GraphicsWindow.FillRectangle(SnakeTailX * 16+12, SnakeTailY*16+4,4,8)
+    EndIf
+EndSub
+
+Sub ProcessDirectionInput
+    If (Text.GetLength(DirectionInput)>0) Then
+        Temp = Text.GetSubText(DirectionInput,1,1)
+        DirectionInput = Text.GetSubText(DirectionInput,1,Text.GetLength(DirectionInput)-1)
+        Direction = Array.GetValue("DirectionInput",Temp)
+    EndIf
+EndSub
+
+Sub StartGame
+    Direction=""
+    DirectionInput=""
+    SnakeLength = 1
+    SnakeMaximumLength = 4
+    SnakeHeadX = 20
+    SnakeHeadY = 15
+    SnakeTailX = 20
+    SnakeTailY = 15
+    AtePellet = 0
+    Score = 0
+    GraphicsWindow.Clear()
+    DrawHead()
+    AddPellet()
+    UpdateScore()
+EndSub
+
+Sub UpdateScore
+    GraphicsWindow.Title = "SBSnake - "+Score
+EndSub
+
+Sub DoPlayLoop
+    If (ScreenDirty = 1) Then
+        ScreenDirty = 0
+        StartGame()
+    Else
+        If (Direction <> "" Or DirectionInput<>"") Then
+            ProcessDirectionInput()
+            EraseHead()
+            SnakeHeadX = SnakeHeadX + Array.GetValue("DeltaX",Direction)
+            SnakeHeadY = SnakeHeadY + Array.GetValue("DeltaY",Direction)
+            If (SnakeHeadX<0 Or SnakeHeadX>39 Or SnakeHeadY < 0 Or SnakeHeadY > 29) Then
+                GameState = "GameOver"
+                ScreenDirty = 1
+            Else
+                If (GraphicsWindow.GetPixel(SnakeHeadX*16+8,SnakeHeadY*16+8)="#FF0000") Then
+                    Score = Score + 1
+                    UpdateScore()
+                    AtePellet = 1
+                    SnakeMaximumLength = SnakeMaximumLength + 2
+                    AddPellet()
+                Else
+                    AtePellet = 0
+                EndIf
+                If (GraphicsWindow.GetPixel(SnakeHeadX*16+8,SnakeHeadY*16+8)="#00FF00") Then
+                    GameState = "GameOver"
+                    DrawHead()
+                    ScreenDirty = 1
+                Else
+                    SnakeLength = SnakeLength + 1
+                    DrawHead()
+                    While (SnakeLength>SnakeMaximumLength)
+                        EraseTail()
+                        SnakeLength = SnakeLength - 1
+                    EndWhile
+                    Program.Delay(GameDelay)
+                EndIf
+            EndIf
+        EndIf
+    EndIf
+EndSub
+
+Sub DoGameOverLoop
+    If (ScreenDirty = 1) Then
+        ScreenDirty = 0
+        GraphicsWindow.BrushColor = "#000000"
+        GraphicsWindow.FontSize = 32
+        GraphicsWindow.DrawText(0,0,"Game Over!")
+        GraphicsWindow.FontSize = 16
+        GraphicsWindow.DrawText(0,64," for instructions")
+        GraphicsWindow.DrawText(0,80," for a new game")
+        GraphicsWindow.DrawText(0,96," to exit")
+    EndIf
+EndSub
+
+Sub DoGameLoop
+    If (GameState = "TitleScreen") Then
+        DoTitleScreenLoop()
+    Else
+        If (GameState = "Instructions") Then
+            DoInstructionLoop()
+        Else
+            If (GameState = "Play") Then
+                DoPlayLoop()
+            Else
+                If (GameState = "GameOver") Then
+                    DoGameOverLoop()
+                EndIf
+            EndIf
+        EndIf
+    EndIf
+EndSub
